@@ -57,7 +57,6 @@ def remove_stop_words(text):
             new_text += ' ' + word
     return new_text
 
-
 def remove_punctuation(word):
     punctuations = '''‘!()-[]{};:'’"\,<>./?@#$%^&*_~€™'''
 

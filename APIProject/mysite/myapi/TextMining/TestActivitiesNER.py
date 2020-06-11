@@ -3,12 +3,8 @@ import re
 import matplotlib.pyplot as plt
 import numpy as np
 from mysite.myapi.TextMining.ActivitiesNER import union_answers, standford_NER, match_locations, check_enumerations, \
-    spacy_en_NER, senna_NER, group_locations, filter_enums, get_locations, exclude_answers
-
-
-
-
-
+    spacy_en_NER, senna_NER, group_locations, filter_enums, get_locations, exclude_answers, group_entities, \
+    filter_locations
 
 
 def get_results(out_path, test_path, path):
@@ -34,6 +30,10 @@ def get_results(out_path, test_path, path):
     test_out = open(test_path, 'a')
     test_out.write(str(gt_text))
 
+
+
+
+
 def get_activities_text_file(file_to_read, blogTitle):
   path = 'C:\\Users\\Clara2\\Desktop\\Licenta\TestBERT\\TestNERActivities\\' + blogTitle+'\\'
   if not os.path.exists(path):
@@ -41,7 +41,8 @@ def get_activities_text_file(file_to_read, blogTitle):
     file = open(file_to_read, 'r',encoding='utf-8')
     text = file.read()
     text = text.replace('.', '.\n')
-    text = replace_non_eng_letters(text)
+    text = text.replace('Looks like it&27 s closed', '')
+    #text = replace_non_eng_letters(text)
 
     enumerations = [x.group() for x in re.finditer(
         r'(([A-Z-][a-z-]+( ([a-z]+\s)*[A-Z-][a-z-]+)*, )+[A-Z-][a-z-]+ ([A-Z-][a-z-]+)*(and [A-Z-][a-z-]+ *(([a-z]+ )*[A-Z-][a-z-]+)*)*)',
@@ -53,7 +54,8 @@ def get_activities_text_file(file_to_read, blogTitle):
 
     ###---------- Senna NER --------------------###
     classified_text_senna = senna_NER(text)
-    locations_senna = match_locations(classified_text_senna, tokenized_text)
+    #locations_senna = match_locations(classified_text_senna, tokenized_text)
+    locations_senna = filter_locations(group_entities(classified_text_senna, text))
     locations_senna = check_enumerations(locations_senna, enumerations)
 
     locations_senna = get_locations(locations_senna)
@@ -82,6 +84,7 @@ def get_activities_text_file(file_to_read, blogTitle):
 
     classified_text_spacy = spacy_en_NER(text)
     locations_spacy = match_locations(classified_text_spacy, tokenized_text)
+    #locations_spacy = filter_locations(classified_text_spacy)
     locations_spacy = check_enumerations(locations_spacy, enumerations)
 
     locations_spacy = get_locations(locations_spacy)
@@ -103,6 +106,7 @@ def get_activities_text_file(file_to_read, blogTitle):
 
     ###---------Standford NER-------------------###
     classified_text_standford = standford_NER(text)
+    #locations_standford = filter_locations(group_entities(classified_text_standford, text))
     locations_standford = match_locations(classified_text_standford, tokenized_text)
     locations_standford = check_enumerations(locations_standford, enumerations)
 
@@ -190,33 +194,32 @@ def get_activities_text_file(file_to_read, blogTitle):
     result.write(str(len(main_list)))
     result.write("\n\n")
 
-    print(union_answers(locations_senna, locations_standford, locations_spacy, text, classified_text_standford,
-                        classified_text_spacy, classified_text_senna, enumerations))
+    print(union_answers(locations_senna, locations_standford, locations_spacy))
 
-#path = r'C:\Users\Clara2\Desktop\Licenta\TestBERT\TestNERActivities'
-#for file in os.listdir(path):
-#    get_activities_text_file(path+'\\'+file, file.split('.txt')[0])
+path = r'C:\Users\Clara2\Desktop\Licenta\TestBERT\TestNERActivities'
+for file in os.listdir(path):
+    get_activities_text_file(path+'\\'+file, file.split('.txt')[0])
 
 
 def draw_result_chart(path):
 
-    result = dict()
-    result['spacy']=0
-    result['senna']=0
-    result['standford']=0
+    #result = dict()
+    #result['spacy']=0
+    #result['senna']=0
+    #result['standford']=0
 
-    #result = dict();
-    #result['Spacy+Standford']=0
-    #result['Senna+Spacy']=0
-    #result['Standford+Senna']=0
-    #result['All']=0
+    result = dict();
+    result['Spacy+Standford']=0
+    result['Senna+Spacy']=0
+    result['Standford+Senna']=0
+    result['All']=0
 
 
     for dir in os.listdir(path):
         if not '.txt' in dir:
             for file in os.listdir(path+dir):
 
-                if 'result' in file and False:
+                if 'result' in file:
                     test = open(path + dir + "\\" + file, 'r')
                     content = test.read()
                     content = content.split('\n')
@@ -234,7 +237,7 @@ def draw_result_chart(path):
                         elif 'Senna+Spacy+Standford:' in line:
                             result['All'] += int(line.split('Senna+Spacy+Standford:')[1].strip())
 
-                if 'test' in file:
+                if 'test' in file and False:
                     test = open(path+dir+"\\"+file, 'r')
                     content = test.read()
                     total_result = content.split('TOTAL:')[1].strip()
@@ -246,30 +249,30 @@ def draw_result_chart(path):
                         result['standford'] += int(total_result)
 
     # x-coordinates of left sides of bars
-    left = [1, 2, 3]
-
-    # heights of bars
-    height = list()
-    height.append(result['spacy']/76)
-    height.append(result['senna']/76)
-    height.append(result['standford']/76)
-
-
-    # labels for bars
-    tick_label = ['spacy', 'senna', 'standford']
-
-    # x-coordinates of left sides of bars
-    #left = [1, 2, 3, 4]
+    #left = [1, 2, 3]
 
     # heights of bars
     #height = list()
-    #height.append( result['Spacy+Standford']/76)
-    #height.append( result['Senna+Spacy']/76)
-    #height.append(result['Standford+Senna']/76)
-    #height.append(result['All']/76)
+    #height.append(result['spacy'])
+    #height.append(result['senna'])
+    #height.append(result['standford'])
+
 
     # labels for bars
-    #tick_label = ['Spacy+Standford', 'Senna+Spacy', 'Standford+Senna', 'All']
+    #tick_label = ['spacy', 'senna', 'stanford']
+
+    # x-coordinates of left sides of bars
+    left = [1, 2, 3, 4]
+
+    # heights of bars
+    height = list()
+    height.append( result['Spacy+Standford'])
+    height.append( result['Senna+Spacy'])
+    height.append(result['Standford+Senna'])
+    height.append(result['All'])
+
+    # labels for bars
+    tick_label = ['Spacy+Stanford', 'Senna+Spacy', 'Stanford+Senna', 'All']
 
     # plotting a bar chart
     plt.bar(left, height, tick_label=tick_label,
@@ -314,8 +317,8 @@ def draw_time_chart():
     # function to show the plot
     plt.show()
 
-#draw_result_chart('C:\\Users\\Clara2\\Desktop\\Licenta\\TestBERT\\TestNERActivities\\')
+#draw_result_chart('C:\\Users\\Clara2\\Desktop\\Licenta\\TestBERT\\TestNERActivitiesGroupEntities\\')
 #time per 10 blogs
-draw_time_chart()
+#draw_time_chart()
 
-numer_of_blogs=76
+#numer_of_blogs=76

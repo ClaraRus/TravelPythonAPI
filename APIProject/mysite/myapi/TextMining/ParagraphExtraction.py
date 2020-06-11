@@ -19,10 +19,7 @@ def is_title(paragraph):
 
 def structure_text(text):
     text = text.split("\n")
-
-    #print(text)
     structured_text = dict()
-
     title_before = ""
     for paragraph in text:
      if len(paragraph) > 0:
@@ -52,20 +49,17 @@ def extract_paragraph(text, location):
     text = text.replace(r"\n","\n");
 
     structured_text = structure_text(text)
-
     if  isinstance(structured_text, dict):
     #case 1: location is a subtitle
         for key in structured_text.keys():
             if location.lower() in key.lower():
-                return structured_text[key]
+                if not structured_text[key] == '':
+                    return structured_text[key]
 
     #case 2: extract sentances containing the location
     sentances = extract_sentances(structured_text, location)
+    print(sentances)
 
-    #case 3: extract asentances with pronoun transformation
-
-    #result = dict()
-    #result['sentances'] = sentances
     return ".".join(sentances)
 
 #def combine_paragraphs(parapgraphs):

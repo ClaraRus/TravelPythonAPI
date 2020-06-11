@@ -1,4 +1,3 @@
-
 import itertools
 import json
 
@@ -10,146 +9,112 @@ import os
 import re
 from nltk.corpus import stopwords
 
-#from mysite.myapi.TextMining.ParagraphExtraction import structure_text
-#from mysite.myapi.TextMining.TextProcessing import remove_punctuation, remove_stop_words
-from .ParagraphExtraction import structure_text
-from .TextProcessing import remove_punctuation, remove_stop_words
+from mysite.myapi.TextMining.ParagraphExtraction import structure_text
+from mysite.myapi.TextMining.TextProcessing import remove_punctuation, remove_stop_words
 
 
-def check_part_group(text):
-    # part group should not contain punctuation
-    punctuations = '!()-[]{};:\,<>./?@#$%^&*_~€™'
-    for punctuation in punctuations:
-        if punctuation in text:
-            return False
+# from .ParagraphExtraction import structure_text
+# from .TextProcessing import remove_punctuation, remove_stop_words
 
-    # part group should not be a stop word
-    stopwords = {' and ', ' or '}
-    for word in stopwords:
-        if word in text.lower() or word.strip() == text.lower():
+def check_punctuation(word):
+    separation_punctuation = '.,:;!?'
+    for punctuation in separation_punctuation:
+        if punctuation in word:
             return False
     return True
 
+def compose(entities, tag, text, text_index):
+    text = text.replace('\n','\n ')
+    text = [ word for word in text.split(' ') if len(word.strip())>0 and len(word)>0]
 
-def group_locations(text):
-    # text=remove_stop_words(text)
-    # text=remove_punctuation(text)
-    tokenized_text = text.split(' ')
+    #text = word_tokenize(text)
+    result = ""
+    result_list=[]
+    end_of_group=False
+    for entity in entities:
+            #text_index = text.index(entity[0])
+        if text_index < len(text):
+            if entity[0] in text[text_index]:
+                if check_punctuation(text[text_index]) and '\n' in text[text_index]:
+                    end_of_group=True
+                    result += remove_punctuation(entity[0].strip()) + " "
+                    result_list.append(result)
+                    result = ""
+                else: end_of_group=False
 
-    tokenized_text = list(tokenized_text)
-
-    tokenized_text = list(filter(lambda a: a != "", tokenized_text))
-    tokenized_text = list(filter(lambda a: len(a) > 1, tokenized_text))
-    appended = 0
-
-    locations = []
-    count = 0
-    spplited_token = False
-    max = len(tokenized_text) - 1
-    for i in range(1, max):
-        if i > max:
-            break
-        if len(tokenized_text[i]) > 1:
-            spplited_token = False
-            token = tokenized_text[i]
-
-            #if "Lake" in token:
-                #print("stop")
-
-            #if 'Theatre' in token:
-             #   print("stop")
-            if appended == 0:
-                prev_word = tokenized_text[i - 1]
-                count = 0
-
-            newLineCondPrevWord = prev_word[len(prev_word) - 1] == '\n' or '\n' not in prev_word
-            if '\n' in token:  # and (appended == 1 or token[len(token) - 1] == '\n'):
-                token = token.split('\n')[0]
-                spplited_token = True
-            if '\n' in prev_word and appended == 0 and len(prev_word.split('\n')) > 1:
-                if len(prev_word.split('\n')[prev_word.count('\n')]) > 1:
-                    prev_word = prev_word.split('\n')[prev_word.count('\n')]
-                    newLineCondPrevWord = True
-
-            if len(token) > 1:
-                cond1 = prev_word[0].isupper() and check_part_group(prev_word) and token[0].isupper() and not \
-                token[1].isupper() and newLineCondPrevWord and '\n' not in token
-                cond2 = prev_word[0].isupper() and check_part_group(prev_word) and tokenized_text[i + 1][
-                0].isupper() and not \
-                        tokenized_text[i + 1][1].isupper() and check_part_group(
-                token) and newLineCondPrevWord and '\n' not in token
-
-                if cond1 == True or cond2 == True:
-                    count = count + 1
-
-                    token = prev_word + " " + token
-
-                    appended = 1
-                    if spplited_token == True:
-                        appended = 0
-                        if not '\n' in token.strip('\n'):
-                            locations.append(token)
-                    if prev_word in locations:
-                        locations.remove(prev_word)
-                    prev_word = token
-                else:
-                    appended = 0
-
-    # exclude_tokens = []
-    for token in locations:
-        locations[locations.index(token)] = remove_punctuation(token.strip('\n'))
-
-    # for token in exclude_tokens:
-    #   locations.remove(token)
-    return locations
+                if not end_of_group:
+                    result += remove_punctuation(entity[0].strip()) + " "
+            else: continue
+            text_index+=1
 
 
-# f= open(r"C:\Users\Clara2\Desktop\Licenta\TestBERT\TestActivities\zagreb1.txt","r")
-# group_locations((f.read()))
+    if len(result_list) > 0:
+        if not end_of_group:
+            result_list.append(result)
+        return (result_list, tag)
+    return (result, tag)
 
-def match_locations(classified_text, tokenized_text):
-    locations = []
-    for word in classified_text:
 
-        if word[1] == 'LOCATION' or word[1] == 'B-LOC' or word[1] == 'I-LOC' or word[1] == 'GPE' or word[1] == 'LOC' or \
-                word[1] == 'FAC':
-
-            if len(word[0].split(' ')) > 1 and len(word[0].split("\n")) > 1:  # result of spacy
-                word1 = word[0].split("\n")[0]
-                word2 = word[0].split("\n")[1]
-                locations.append((remove_punctuation(word1), word[1]))
-                locations.append((remove_punctuation(word2), word[1]))
+def group_entities(entities, text):
+    grouped_entities = []
+    temp_group = []
+    tag = entities[0][1]
+    text_index=0
+    for index in range(0, len(entities)):
+        if len(grouped_entities)== 36:
+            print("stop")
+        if '-' in tag and ('B' in tag and 'I' in entities[index][1] and entities[index][1].split('-')[1] == tag.split('-')[1] and len(remove_punctuation(entities[index][0]))>0) or index ==0:
+                temp_group.append(entities[index])
+                text_index += 1
+        elif not '-' in entities[index][1] and entities[index][1] == tag and len(remove_punctuation(entities[index][0]))>0:
+            temp_group.append(entities[index])
+            text_index+=1
+        else:
+          if len(temp_group)>0:
+            result = compose(temp_group, tag, text, text_index-len(temp_group))
+            if isinstance(result[0], list):
+                for r in result[0]:
+                    grouped_entities.append((r, result[1]))
             else:
-                match = [x for x in tokenized_text if word[0] in x]
-                if len(match) > 0:
-                    locations.append((remove_punctuation(match[0]), word[1]))
-                else:
-                    locations.append((remove_punctuation(word[0]), word[1]))
+                grouped_entities.append(result)
 
-    locations = list(dict.fromkeys(locations))
+          temp_group = []
+          if len(remove_punctuation(entities[index][0]))>0:
+                temp_group.append(entities[index])
+                text_index += 1
+          tag = entities[index][1]
 
+    return grouped_entities
+
+def filter_locations(entities):
+    locations = []
+    for entity in entities:
+        if check_tag_location(entity[1]):
+            locations.append(entity)
     return locations
+
 
 
 def check_tag_location(tag):
-    return tag == 'LOCATION' or tag == 'FAC' or tag == 'GPE' or tag == 'FAC' or tag == 'B-LOC' or tag == 'I-LOC'
+    return tag == 'LOCATION' or tag == 'FAC' or tag == 'GPE'  or tag == 'B-LOC' or tag == 'I-LOC' or tag == 'LOC'
+
 
 def union_tags(classified_text1, classified_text2, classified_text3, text_tag):
     # text_tag = dict()
-
 
     for text1 in classified_text1:
 
         if not remove_punctuation(text1[0]) in text_tag.keys():
             if len(classified_text2) > 0:
                 matches2 = [text2 for text2 in classified_text2 if
-                        remove_punctuation(text2[0]) == remove_punctuation(text1[0])]
+                            remove_punctuation(text2[0]) == remove_punctuation(text1[0])]
             if len(classified_text3) > 0:
                 matches3 = [text3 for text3 in classified_text3 if
-                        remove_punctuation(text3[0]) == remove_punctuation(text1[0])]
+                            remove_punctuation(text3[0]) == remove_punctuation(text1[0])]
+            matches1 = [text for text in classified_text1 if remove_punctuation(text[0]) == remove_punctuation(text1[0])]
 
             matches = list()
-            for match in text1:
+            for match in matches1:
                 tag = match
                 if check_tag_location(tag):
                     tag = 'LOC'
@@ -251,7 +216,7 @@ def min_freq(text_freq, locations):
 
     index_min = 0
     i = 0
-    #print(freq_list)
+    # print(freq_list)
     for freq in freq_list:
         if freq - sum(freq_list[i + 1:]) >= 1 and index_min == 0:
             if i == 1 and len(locations) == 10:
@@ -261,7 +226,7 @@ def min_freq(text_freq, locations):
 
         i = i + 1
 
-    return index_min -1
+    return index_min - 1
 
 
 def calculate_freq(locations, text, destination):
@@ -314,33 +279,32 @@ def calculate_freq(locations, text, destination):
 def calculate_score(text_freq, text_tag, enumerations, destination, titles):
     text_score = dict()
     for location in text_freq.keys():
-
         if location in titles:
-            score = 1;
+            score = 1
         else:
-          if len(location.split(' ')) > 1:
-            tags = list()
-            for word in location.split(' '):
-                if word not in destination:
-                    added = 0
+            if len(location.split(' ')) > 1:
+                tags = list()
+                for word in location.split(' '):
+                    if word not in destination:
+                        added = 0
+                        word = remove_punctuation(word)
+                        if word in text_tag.keys():
+                            score_other = text_tag[word].count('O') + text_tag[word].count('B-MISC') + text_tag[
+                                word].count(
+                                'I-MISC')
+                            score_other = score_other / (len(text_tag[word]) - 1)
+                            if not score_other > 0.5:
+                                tags.append(text_tag[word])
+                                added += 1
+                tags = [j for i in tags for j in i]
 
-                    word = remove_punctuation(word)
-                    if word in text_tag.keys():
-                        score_other = text_tag[word].count('O') + text_tag[word].count('B-MISC') + text_tag[word].count(
-                            'I-MISC')
-                        score_other = score_other / (len(text_tag[word]) - 1)
-                        if not score_other > 0.5:
-                            tags.append(text_tag[word])
-                            added += 1
-            tags = [j for i in tags for j in i]
-
-            if len(tags) > 0:
-                score = str(tags).count('LOC') / (len(tags) - added)
+                if len(tags) > 0:
+                    score = str(tags).count('LOC') / (len(tags) - added)
+                else:
+                    score = 0
             else:
-                score = 0
-          else:
-            if location not in destination:
-                score = text_tag[location].count('LOC') / (len(text_tag[location]) - 1)
+                if location not in destination:
+                    score = text_tag[location].count('LOC') / (len(text_tag[location]) - 1)
 
         text_score[location] = score
 
@@ -365,7 +329,7 @@ def calculate_score(text_freq, text_tag, enumerations, destination, titles):
 def union_classified_tags(classified_text_standford, classified_text_spacy, classified_text_senna):
     text_tag = dict()
     text_tag = union_tags(classified_text_standford, classified_text_spacy, classified_text_senna, text_tag)
-    text_tag = union_tags(classified_text_spacy, classified_text_standford, classified_text_senna, text_tag)
+    #text_tag = union_tags(classified_text_spacy, classified_text_standford, classified_text_senna, text_tag)
 
     if len(classified_text_senna) > 0:
         text_tag = union_tags(classified_text_senna, classified_text_spacy, classified_text_standford, text_tag)
@@ -403,11 +367,11 @@ def filter_answers(text_freq, text_tag, enumerations, destination, titles):
     text_score = calculate_score(text_freq, text_tag, enumerations, destination, titles)
 
     match_score = [loc for loc in text_score.keys() if text_score[remove_stop_words(loc).strip()] >= 0.5]
-    #print(match_score)
+    # print(match_score)
     min = min_freq(text_freq, match_score)
-    #print(min)
-    filtered_locations = [loc for loc in match_score if text_freq[remove_stop_words(loc).strip()] > min or (min == 1 and text_freq[remove_stop_words(loc).strip()] == min)]
-
+    # print(min)
+    filtered_locations = [loc for loc in match_score if text_freq[remove_stop_words(loc).strip()] > min or (
+            min == 1 and text_freq[remove_stop_words(loc).strip()] == min)]
 
     for location in text_score.keys():
         for enum in enumerations:
@@ -420,12 +384,10 @@ def filter_answers(text_freq, text_tag, enumerations, destination, titles):
     return filtered_locations
 
 
-
-
 def union_answers(locations_senna, locations_standford, locations_spacy):
     if len(locations_senna) > 0:
         locations_senna = get_locations(locations_senna)
-    if len(locations_standford)> 0:
+    if len(locations_standford) > 0:
         locations_standford = get_locations(locations_standford)
     if len(locations_spacy) > 0:
         locations_spacy = get_locations(locations_spacy)
@@ -474,8 +436,6 @@ def senna_NER(text):
     return locations
 
 
-
-
 def filter_enums(enumerations, destination):
     excluded_enums = []
     for enum in enumerations:
@@ -494,54 +454,46 @@ def filter_enums(enumerations, destination):
 
 
 def get_activities(text, destination):
-    f = open(r"C:\Users\Clara2\Desktop\Licenta\TestBERT\TestNERActivities\Where To Find Tutankhamun Treasures.txt", "r")
-    text = f.read()
-
     text = text.replace(r"\\n", "\n")
     text = text.replace(r"\n", "\n")
 
-    #the titles and sub-titles may contain important locations
+    # the titles and sub-titles may contain important locations
     structured_text = structure_text(text)
 
-    text = text.replace('.', '.\n')
+    #only the paragraphs are taken into consideration
+    text = " ".join(structured_text.values())
 
-    #elements from an enumeration should have the same tag
+    # elements from an enumeration should have the same tag
     enumerations = [x.group() for x in re.finditer(
         r'(([A-Z-][a-z-]+( ([a-z]+\s)*[A-Z-][a-z-]+)*, )+[A-Z-][a-z-]+ ([A-Z-][a-z-]+)*(and [A-Z-][a-z-]+ *(([a-z]+ )*[A-Z-][a-z-]+)*)*)',
         text)]
     enumerations = filter_enums(enumerations, destination)
 
-    tokenized_text = group_locations(text)
-
-    if isinstance(structured_text, dict):
-        tokenized_text.extend(structured_text.keys())
-    tokenized_text = list(set(tokenized_text))
-
     ###---------- Senna NER --------------------###
-    #classified_text_senna = senna_NER(text)
-    #locations_senna = match_locations(classified_text_senna, tokenized_text)
-    #locations_senna = check_enumerations(locations_senna, enumerations)
+    classified_text_senna = senna_NER(text)
+    locations_senna = filter_locations(group_entities(classified_text_senna, text))
+    locations_senna = check_enumerations(locations_senna, enumerations)
 
-    classified_text_senna = []
-    locations_senna= []
+    #classified_text_senna = []
+    #locations_senna = []
     ###---------- Senna NER --------------------###
 
     ###----------Spacy NER ---------------------###
     classified_text_spacy = spacy_en_NER(text)
-    locations_spacy = match_locations(classified_text_spacy, tokenized_text)
+    locations_spacy = filter_locations(classified_text_spacy)
     locations_spacy = check_enumerations(locations_spacy, enumerations)
 
-    #locations_spacy = []
-    #classified_text_spacy = []
+    # locations_spacy = []
+    # classified_text_spacy = []
     ###----------Spacy NER ---------------------###
 
     ###---------Standford NER-------------------###
     classified_text_standford = standford_NER(text)
-    locations_standford = match_locations(classified_text_standford, tokenized_text)
+    locations_standford = filter_locations(group_entities(classified_text_standford, text))
     locations_standford = check_enumerations(locations_standford, enumerations)
 
-    #locations_standford=[]
-    #classified_text_standford=[]
+    # locations_standford=[]
+    # classified_text_standford=[]
     ###---------Standford NER-------------------###
 
     final_list = union_answers(locations_senna, locations_standford, locations_spacy)
@@ -560,14 +512,12 @@ def get_activities(text, destination):
     result['location'] = final_list
     if isinstance(structured_text, dict):
         result['titles'] = list(structured_text.keys())
-    else: result['titles'] =[]
+    else:
+        result['titles'] = []
 
     return result
 
-get_activities("", "")
-
 def get_final_result(result_blogs):
-
     jdata = json.loads(eval(result_blogs))
 
     destination = jdata[len(jdata) - 1]["destination"]
@@ -606,6 +556,4 @@ def get_final_result(result_blogs):
     # f.write(str(enumerations))
     # f.write(str(min))
 
-    return filter_answers(text_freq, text_tag, enumerations, destination,titles)
-
-
+    return filter_answers(text_freq, text_tag, enumerations, destination, titles)

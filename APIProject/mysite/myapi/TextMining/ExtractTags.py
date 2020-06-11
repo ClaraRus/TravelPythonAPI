@@ -83,7 +83,6 @@ def group_lines(lines):
 
 
 def get_tags_from(lines):
-
     groups = group_lines(lines)
     groups = remove_useless_tags(groups)
 
@@ -92,7 +91,7 @@ def get_tags_from(lines):
     tags += create_tags_from(groups['no_group'])
 
     for tag in tags:
-        if len(tag)<4:
+        if len(tag) < 4:
             tags.remove(tag)
 
     return tags
@@ -126,8 +125,9 @@ def remove_useless_tags(groups):
 
     return groups
 
+
 def get_adj_freq(text):
-    adj_freq=dict()
+    adj_freq = dict()
     nlp = spacy.load("en_core_web_sm")
     text = " ".join(text)
     doc = nlp(text)
@@ -135,8 +135,8 @@ def get_adj_freq(text):
         if "JJ" in token.tag_ and len(token.text) > 2:
             if not token.text in adj_freq.keys():
                 adj_freq[token.text] = text.count(token.text)
-
     return adj_freq
+
 
 def get_keywords_from(text):
     stop_words = stopwords.words("english")
@@ -147,6 +147,7 @@ def get_keywords_from(text):
     c = r.get_ranked_phrases_with_scores()
 
     return b
+
 
 def get_tags(text_from_url):
     text = text_from_url.replace(r"\\n", "\n")
@@ -160,14 +161,12 @@ def get_tags(text_from_url):
     print(structured_text)
 
     text = get_preprocessed_text(text_from_url)
-    text = remove_useless_words(text)
-
-    text = [remove_punctuation(word) for word in text if len(word) > 1]
 
     adj_freq = get_adj_freq(text)
     most_adj_freq_words = heapq.nlargest(10, adj_freq.items(), key=itemgetter(1))
 
-
+    text = remove_useless_words(text)
+    text = [remove_punctuation(word) for word in text if len(word) > 1]
     frq_dict = frequency(text)
     most_freq_words = heapq.nlargest(3, frq_dict.items(), key=itemgetter(1))
 
@@ -199,6 +198,7 @@ def get_tags(text_from_url):
 
     tags = list(set(tags))
     return tags
+
 
 f = open(r"C:\Users\Clara2\Desktop\Licenta\TestBERT\TagsNew.txt", "r")
 get_tags(f.read())
