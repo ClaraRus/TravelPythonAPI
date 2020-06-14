@@ -294,8 +294,9 @@ def calculate_score(text_freq, text_tag, enumerations, destination, titles):
                 else:
                     score = 0
             else:
-                if location not in destination:
+                 if location not in destination and location in text_tag.keys():
                     score = text_tag[location].count('LOC') / len(text_tag[location])
+                else: score = 0
 
         text_score[location] = score
 
