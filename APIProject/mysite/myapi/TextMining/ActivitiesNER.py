@@ -463,6 +463,8 @@ def get_activities(text, destination):
     #only the paragraphs are taken into consideration
     text = " ".join(structured_text.values())
 
+    text = text.replace('.', '.\n')
+    
     # elements from an enumeration should have the same tag
     enumerations = [x.group() for x in re.finditer(
         r'(([A-Z-][a-z-]+( ([a-z]+\s)*[A-Z-][a-z-]+)*, )+[A-Z-][a-z-]+ ([A-Z-][a-z-]+)*(and [A-Z-][a-z-]+ *(([a-z]+ )*[A-Z-][a-z-]+)*)*)',
@@ -516,6 +518,9 @@ def get_activities(text, destination):
         result['titles'] = []
 
     return result
+
+f=open(r'C:\Users\Clara2\Desktop\Licenta\TestBERT\TestNERActivitiesGroupEntities\20 Must-Visit Attractions in Bucharest.txt','r')
+get_activities(f.read(), "")
 
 def get_final_result(result_blogs):
     jdata = json.loads(eval(result_blogs))
