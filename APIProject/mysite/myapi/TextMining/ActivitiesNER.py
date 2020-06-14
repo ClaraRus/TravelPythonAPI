@@ -9,12 +9,9 @@ import os
 import re
 from nltk.corpus import stopwords
 
-from mysite.myapi.TextMining.ParagraphExtraction import structure_text
-from mysite.myapi.TextMining.TextProcessing import remove_punctuation, remove_stop_words
 
-
-# from .ParagraphExtraction import structure_text
-# from .TextProcessing import remove_punctuation, remove_stop_words
+from .ParagraphExtraction import structure_text
+from .TextProcessing import remove_punctuation, remove_stop_words
 
 def check_punctuation(word):
     separation_punctuation = '.,:;!?'
@@ -294,7 +291,7 @@ def calculate_score(text_freq, text_tag, enumerations, destination, titles):
                 else:
                     score = 0
             else:
-                 if location not in destination and location in text_tag.keys():
+                if location not in destination and location in text_tag.keys():
                     score = text_tag[location].count('LOC') / len(text_tag[location])
                 else: score = 0
 
